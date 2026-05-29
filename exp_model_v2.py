@@ -1,74 +1,75 @@
-# TODO this is temporary until we create a subpackage!
-import os
+"""Physical optical experiment helpers for camera/SLM acquisition."""
+
 import sys
 from pathlib import Path
-
-root = Path(__file__).resolve().parents[3]
-library_root = root / "library"
-for path in (root, library_root):
-    path_str = str(path)
-    if path_str not in sys.path:
-        sys.path.append(path_str)
-
-import library
-thisfiledir = Path(__file__).resolve().parent
-expdir = str(thisfiledir)
-savedir = str(thisfiledir / "data" / "model_training")
-calibdir = thisfiledir / "calibration"
-import time
-import numpy as np
-import ipywidgets
 import pickle
+
+thisfiledir = Path(__file__).resolve().parent
+for root in (thisfiledir, *thisfiledir.parents):
+    library_root = root / "library"
+    if library_root.exists():
+        for path in (root, library_root):
+            path_str = str(path)
+            if path_str not in sys.path:
+                sys.path.insert(0, path_str)
+        break
+
+import ipywidgets
+import numpy as np
 import cv2
-from shutil import copyfile
-from datetime import datetime
-
-# Pytorch imports
 import torch
-import torchvision
-import torch.nn as nn
+from scipy.ndimage import gaussian_filter
 
-import torch.optim as optim
-from torch.optim import Adam, RMSprop
-from torchvision.datasets import MNIST, FashionMNIST
-from torchvision.transforms import Compose, ToTensor, Normalize, Lambda
-from torch.utils.data import DataLoader, default_collate
-
-# Custom modules and NN
-from library.software.extra import ComplexLayerNorm, ComplexAvgPool2d, CPU2GPU, DebugFigure, Repeat
-from library.software.layers import FFConv, FFLinear, FFElmwise, FFPhaseElmwise
 from library.software.layers import Screen, Camera, Mask
-
-from library.software.architectures import NormalNet, FFNet
-from library.software.dataloaders import MNIST_loaders
-from op_torch import img_nav
-
-# Camera imports
-from library.hardware.PylonCamera import PylonCamera
-from library.hardware import DispUtils
-
-# Display imports
-from library.hardware import DispUtils
 from library.hardware.DisplayGL import DisplayGL
 from library.hardware.PylonCamera import PylonCamera
 from library.hardware.DeviceManager import DeviceManager
 
-# Select GPU as device if possible
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+expdir = str(thisfiledir)
+savedir = str(thisfiledir / "data" / "model_training")
+calibdir = thisfiledir / "calibration"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-global calibfile
-calibfile = input('Name of calibration/data file ?')
-os.chdir(calibdir)
-file = open(f'data_{calibfile}', 'rb')
-[zoom, img_size, slm_size, pat_pad, cam_pad, batch_layout, batch_stacks, shape_labeled, Npix] = pickle.load(file)
-file.close() ; os.chdir(thisfiledir)
+calibfile = None
+zoom = img_size = slm_size = pat_pad = cam_pad = batch_layout = batch_stacks = shape_labeled = Npix = None
+Nmux = Npix_x = Npix_y = Npixtot = Nin = None
 
-Nmux = batch_layout[0]*batch_layout[1]
-Npix_x, Npix_y = Npix[0], Npix[1]
-Npixtot = Npix_x * Npix_y
-Nin = shape_labeled[0]*shape_labeled[1]
+
+def load_calibration_data(calibration_name=None):
+    """Load calibration metadata and populate module-level hardware geometry."""
+    global calibfile, zoom, img_size, slm_size, pat_pad, cam_pad, batch_layout, batch_stacks, shape_labeled, Npix
+    global Nmux, Npix_x, Npix_y, Npixtot, Nin
+
+    if calibration_name is None:
+        calibration_name = calibfile or input("Name of calibration/data file ?")
+    calibfile = str(calibration_name)
+
+    with open(calibdir / f"data_{calibfile}", "rb") as file:
+        [zoom, img_size, slm_size, pat_pad, cam_pad, batch_layout, batch_stacks, shape_labeled, Npix] = pickle.load(file)
+
+    Nmux = batch_layout[0] * batch_layout[1]
+    Npix_x, Npix_y = Npix[0], Npix[1]
+    Npixtot = Npix_x * Npix_y
+    Nin = shape_labeled[0] * shape_labeled[1]
+    return {
+        "zoom": zoom,
+        "img_size": img_size,
+        "slm_size": slm_size,
+        "pat_pad": pat_pad,
+        "cam_pad": cam_pad,
+        "batch_layout": batch_layout,
+        "batch_stacks": batch_stacks,
+        "shape_labeled": shape_labeled,
+        "Npix": Npix,
+    }
+
+
+def _require_calibration_loaded():
+    if calibfile is None:
+        load_calibration_data()
 
 def generate_flat_slm_mask(shape_labeled, value=0):
+    _require_calibration_loaded()
     '''
     Input:  shape_labeled: [Lx,Ly] vector
             n_repeat: nb of px for the same value
@@ -79,6 +80,7 @@ def generate_flat_slm_mask(shape_labeled, value=0):
     return slm_stack
 
 def generate_random_slm_mask(shape_labeled, n_repeat=2, same=True):
+    _require_calibration_loaded()
     '''
     Input:  shape_labeled: [lx,ly] vector
             n_repeat: nb of px for the same value
@@ -108,6 +110,7 @@ def build_filteredweight_series(shape, sigma_list=[0.1, 0.2, 0.4, 0.7, 1, 2, 5],
     return mf
 
 def arange_mask_series(mask_series):
+    _require_calibration_loaded()
     '''
     Input:  shape_labeled: [lx,ly] vector
             n_repeat: nb of px for the same value
@@ -120,6 +123,7 @@ def arange_mask_series(mask_series):
     return slm_stack   
 
 def reshape_stack(stack):
+    _require_calibration_loaded()
     out=[]
     for i in range(batch_stacks):
         out.append(np.stack([stack[i*Nmux+j,0,::] for j in range(Nmux)]))
@@ -131,7 +135,8 @@ def bgr8_to_jpeg(frame, quality=75):
 def update_widget(img_widget, value):
     img_widget.value = bgr8_to_jpeg(value)
 
-def exp( exp = 5000, widget = False, cal_key='uD-out#0' ):
+def exp(exp=5000, widget=False, cal_key='uD-out#0', calibration_name=None):
+    load_calibration_data(calibration_name)
     img_widget = ipywidgets.Image(format='jpeg', value=bgr8_to_jpeg(np.zeros((1,1))), width=400, height=300)
 
     #Initializes the SLM
@@ -145,12 +150,8 @@ def exp( exp = 5000, widget = False, cal_key='uD-out#0' ):
     cam_dev._camera.ExposureTime.Value = exp
     
     # Get the data from calibration
-    os.chdir(calibdir)
-    file = open(f'calibration_{calibfile}', 'rb')
-    [cal_dict, slm_xy_offsets] = pickle.load(file) ; file.close()
-    file = open(f'data_{calibfile}', 'rb')
-    [zoom, img_size, slm_size, pat_pad, cam_pad, batch_layout, batch_stacks, shape_labeled, Npix] = pickle.load(file)
-    file.close(); os.chdir(thisfiledir)
+    with open(calibdir / f'calibration_{calibfile}', 'rb') as file:
+        [cal_dict, slm_xy_offsets] = pickle.load(file)
 
     if widget:
         train_wid_all = ipywidgets.Image(format='jpeg', value=bgr8_to_jpeg(np.zeros((1,1))), width=1000, height=550)
@@ -190,5 +191,3 @@ def exp( exp = 5000, widget = False, cal_key='uD-out#0' ):
             return out #out.reshape(batch_stacks, *batch_layout, *Npix) #uncomment for out shape = (batch_stacks, *batch_layout, Npix_x, Npix_y)
         
     return layer_model(), [train_wid_all, train_wid_one]
-
-os.chdir(thisfiledir)

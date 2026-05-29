@@ -9,7 +9,7 @@ ipywidgets
 pandas
 pillow
 opencv-python
+scipy
 transformers
 pytorch-msssim
 focal-frequency-loss
-

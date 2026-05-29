@@ -1,6 +1,6 @@
-# ONN Online Training
+# Multi-channel Optical Vision Model
 
-Code and configuration for online training experiments with multi-channel optical neural networks.
+Code and configuration for online training experiments with multi-channel optical neural networks (Multi-channel OVM).
 
 ## Setup
 
@@ -33,7 +33,7 @@ python optical_onn_training_mix.py --override onn.max_epochs=2 --override data.b
 - `config_loader.py` loads YAML experiment configs, applies runtime overrides, resolves random seeds, and writes reproducible config snapshots.
 - `dataloader_patch.py` builds datasets and dataloaders for image, patchified, face-keypoint, notMNIST, VLM captioning, and synthetic experiments.
 - `exp_model_v2.py` provides physical optical experiment helpers for SLM mask generation, camera acquisition, and live display.
-- `fine_tunning.py` buffers optical-layer measurements and periodically fine-tunes the surrogate model during ONN training.
+- `fine_tuning.py` buffers optical-layer measurements and periodically fine-tunes the surrogate model during ONN training.
 - `models.py` defines the surrogate optical U-Net and related residual, attention, upsampling, and correction modules.
 - `optical_bridge.py` connects the physical optical forward pass with surrogate-based gradients through a custom autograd bridge.
 - `phase_system.py` manages trainable optical phase masks, including initialization, normalization, smoothing, and conversion to valid phase units.

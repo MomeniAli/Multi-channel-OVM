@@ -45,7 +45,7 @@ try:
         init_phase_viz_state,
         update_phase_viz,
     )
-    from .fine_tunning import (
+    from .fine_tuning import (
         accumulate_fine_tune_samples,
         init_fine_tune_state,
         maybe_fine_tune_surrogate,
@@ -69,7 +69,7 @@ except ImportError:
         init_phase_viz_state,
         update_phase_viz,
     )
-    from fine_tunning import (
+    from fine_tuning import (
         accumulate_fine_tune_samples,
         init_fine_tune_state,
         maybe_fine_tune_surrogate,
