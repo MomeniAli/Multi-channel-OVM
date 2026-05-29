@@ -63,7 +63,9 @@ def _style_axes(ax):
     ax.tick_params(color="#7F7F7F", labelcolor="black", width=0.8, length=5)
 
 _THIS_DIR = Path(__file__).resolve().parent
-ckpt_path = str(_THIS_DIR / "pre_trained_model_save/Optical_neural_net/checkpoints/checkpoints/_mul_5_final.pt")
+ckpt_path = str(
+    _THIS_DIR / "pre_trained_model_save" / "Optical_neural_net" / "checkpoints" / "_mul_5_final.pt"
+)
 default_avg_batch = 50
 avg_batch_options = [1, 8, 16, 32, 64, 128, 256, 512, 1024]
 

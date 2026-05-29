@@ -10,7 +10,6 @@ pandas
 pillow
 opencv-python
 scipy
-screeninfo
 pypylon
 transformers
 pytorch-msssim

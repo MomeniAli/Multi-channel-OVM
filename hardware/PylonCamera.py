@@ -1,13 +1,8 @@
-import os
 import cv2
 import time
-import torch
-import queue
-import subprocess
 from collections import deque
 import numpy as np
 from pypylon import pylon
-from pypylon import genicam
 
 
 __queue_length__ = 16

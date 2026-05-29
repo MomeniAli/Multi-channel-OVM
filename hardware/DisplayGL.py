@@ -1,21 +1,16 @@
-import os
 import time
 import torch
-import screeninfo
 import numpy as np
 import cudacanvas
-import matplotlib.pyplot as plt
 
 __screen_width__ = 1920
 __screen_height__ = 1080
 __monitor_id__ = 1
 
 class DisplayGL:
-    """
-        Interface any screen using CudaGLStreamer
-    """
+    """Display interface backed by the lab CUDA/OpenGL streamer."""
 
-    # The CUDA GL Streamer once, it handles both windows    
+    # One shared CUDA/OpenGL streamer drives both display windows.
     __GLstreamer = None
     _display_img = torch.zeros((__screen_height__, __screen_width__*2), device="cuda").to(torch.uint8).contiguous()
     __display_lst = [torch.zeros((__screen_height__, __screen_width__), device="cuda"), torch.zeros((__screen_height__, __screen_width__), device="cuda")]
@@ -61,7 +56,7 @@ class DisplayGL:
             self.init_GLstreamer(reverseX=reverseX, reverseY=reverseY)
 
         self._win_id = screen_id - 1
-        # Wierdly enough we need to do that for single operation screen :S TODO
+        # Prime the shared streamer before putting a single screen in suspend mode.
         self.display(np.zeros((__screen_height__, __screen_width__)))
         self.suspend()
 
@@ -75,8 +70,12 @@ class DisplayGL:
         :return: None
         :rtype: None
         """
-        self.__GLstreamer.stop_render()
-        print("Warning: Display destructor not properly done!")
+        streamer = getattr(self, "_DisplayGL__GLstreamer", None)
+        if streamer is not None:
+            try:
+                streamer.stop_render()
+            except Exception:
+                pass
         
     def get_screen_size(self):
         """
@@ -101,7 +100,8 @@ class DisplayGL:
             imageData = torch.from_numpy(imageData + self._value_bg)
         else:
             imageData = imageData + self._value_bg 
-        imageData = imageData%1.0001 #to not overshoot the values, cyclical between 0 and 1, useful especially for the SLM as the phase is cyclical, not exactly 1so that 1%1.0001!=0
+        # Keep phase values cyclic in [0, 1) while avoiding 1.0 wrapping exactly to 0.
+        imageData = imageData % 1.0001
         return imageData.mul(scaling).to(torch.uint8).cuda()
 
     def display(self, imageData, sync_frame=False, CUDA2GL=True, scaling=255):
@@ -151,7 +151,6 @@ class DisplayGL:
         if(sync_frame):
              self.__GLstreamer.set_imagePTR(self._sync_pattern.data_ptr())
 
-        #print("foo max:", imageData.max())
         if(imageData.dim() > 2):
             for img in imageData:
                 self.__GLstreamer.set_imagePTR(img.data_ptr())

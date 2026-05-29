@@ -3,7 +3,7 @@ import torch
 import numpy as np
 from scipy import signal
 import torch.nn as nn
-from torch.functional import F
+import torch.nn.functional as F
 from abc import ABC, abstractmethod
 
 
@@ -285,17 +285,15 @@ class FFPhaseElmwise(FFLayer, nn.Linear):
 
 
 class Diffuser(nn.Linear):
-    """ Implementation of the element wise linear transformation
-    """
+    """Fixed random phase diffuser with a circular aperture."""
     
     def __init__(self, in_features, out_features, device=torch.device("cpu"), D_smoothing=40, D_aperture=100):
         """
         :param in_features: Size of each input sample
         :param out_features: Size of each output sample
-        :param
-        :param
-        :param
-        :return: TODO
+        :param D_smoothing: Diameter of the circular kernel used to correlate phase noise.
+        :param D_aperture: Diameter of the circular Fourier-plane aperture.
+        :return: Fixed diffuser module.
         :rtype: nn.Module
         """
         nn.Linear.__init__(self, in_features=in_features, out_features=out_features, bias=False, device=device)
@@ -321,12 +319,12 @@ class Diffuser(nn.Linear):
         self.weight.requires_grad = False
 
     def forward(self, x):
-        """ TODO
+        """Apply the diffuser phase mask and aperture to the input field.
 
         :param x: Input data to be processed
         :type x: torch.Tensor
 
-        :return: Linear transformation of the input normalized x by the weight matrix 
+        :return: Fourier-plane field after phase diffusion and aperture clipping.
         :rtype: torch.Tensor
         """
         
@@ -340,16 +338,7 @@ class Diffuser(nn.Linear):
 
 
 class OpticProp(nn.Module):
-    """[Summary]
-
-    :param [ParamName]: [ParamDescription], defaults to [DefaultParamVal]
-    :type [ParamName]: [ParamType](, optional)
-    ...
-    :raises [ErrorType]: [ErrorDescription]
-    ...
-    :return: [ReturnDescription]
-    :rtype: [ReturnType]
-    """
+    """Physical optical propagation layer combining screen, SLM mask, and camera readout."""
     
     def __init__(self, dev_mgmt, cal_dict, slm_xy_offsets, img_shape=(1, 1, 28, 28), batch_stacks=1, dtype=torch.float, device='cpu', update_widget=None):
         super().__init__()
@@ -386,18 +375,9 @@ class OpticProp(nn.Module):
 
         
 class Camera(nn.Module):
-    """[Summary]
-
-    :param [ParamName]: [ParamDescription], defaults to [DefaultParamVal]
-    :type [ParamName]: [ParamType](, optional)
-    ...
-    :raises [ErrorType]: [ErrorDescription]
-    ...
-    :return: [ReturnDescription]
-    :rtype: [ReturnType]
-    """
+    """Camera readout layer for physical acquisition or simulated intensity detection."""
     
-    def __init__(self, img_shape=(1, 1, 28, 28), batch_stacks=1, dtype=torch.float, device='cpu', cam_dev=None, cal_dict=dict(), cal_key='uD-out#0', update_widget=None, remove_ref = True):
+    def __init__(self, img_shape=(1, 1, 28, 28), batch_stacks=1, dtype=torch.float, device='cpu', cam_dev=None, cal_dict=None, cal_key='uD-out#0', update_widget=None, remove_ref = True):
         super().__init__()
 
         (self._nh, self._nw, self._h, self._w) = img_shape
@@ -405,15 +385,15 @@ class Camera(nn.Module):
         self._dtype = dtype
         self._device = device
         self._cam_dev = cam_dev
-        self._cal_dict = cal_dict
+        self._cal_dict = {} if cal_dict is None else cal_dict
         self._cal_key = cal_key
         self._update_widget = update_widget
         self.remove_ref = remove_ref
 
         if(self._cam_dev):
-            self._h, self._w = cal_dict['info'][cal_key + '_size']
-            self._img_out = np.zeros((self._batch_stacks, len(cal_dict['data']), 1, self._h, self._w))
-            self._img_out_cuda = torch.zeros((self._batch_stacks, len(cal_dict['data']), 1, self._h, self._w)).to(self._device).contiguous()
+            self._h, self._w = self._cal_dict['info'][cal_key + '_size']
+            self._img_out = np.zeros((self._batch_stacks, len(self._cal_dict['data']), 1, self._h, self._w))
+            self._img_out_cuda = torch.zeros((self._batch_stacks, len(self._cal_dict['data']), 1, self._h, self._w)).to(self._device).contiguous()
 
         # Ensure that the Camera layer is not trainable!
         for param in self.parameters():
@@ -431,9 +411,9 @@ class Camera(nn.Module):
                     # Save using the corresponding calibration ID
                     self._img_out[id_stack, item[0], None, :, :] = img_cam[ymin:ymax, xmin:xmax]
     
-                if(self._update_widget is not None):  # This is for debug purpose on the main notebook
+                if(self._update_widget is not None):
                     self._update_widget[0](255*img_cam)
-                    self._update_widget[1](255*img_cam[ymin:ymax, xmin:xmax])  # TODO make a random choice here??
+                    self._update_widget[1](255*img_cam[ymin:ymax, xmin:xmax])
                     
             # The final stacks of images is reshape to respect the initial batch_size (batch_size, x, y)
             self._img_out_cuda = torch.from_numpy(self._img_out).float().to(self._device).contiguous().reshape(self._batch_stacks * self._nh * self._nw, 1, self._h, self._w)
@@ -443,7 +423,7 @@ class Camera(nn.Module):
             # Apply the Camera intensity measure after this everything is done in electronic
             x = torch.abs(x)**2
             
-            if(self._update_widget is not None):  # This is for debug purpose on the main notebook
+            if(self._update_widget is not None):
                 img_out = x.clone().cpu().detach().numpy()
                 self._update_widget[0](img_out[0,0,:,:]*255)
 
@@ -453,16 +433,7 @@ class Camera(nn.Module):
 
 
 class Screen(nn.Module):
-    """[Summary]
-
-    :param [ParamName]: [ParamDescription], defaults to [DefaultParamVal]
-    :type [ParamName]: [ParamType](, optional)
-    ...
-    :raises [ErrorType]: [ErrorDescription]
-    ...
-    :return: [ReturnDescription]
-    :rtype: [ReturnType]
-    """
+    """Display layer that tiles input images onto a calibrated screen canvas."""
     
     def __init__(self, img_shape=(1, 1, 28, 28), batch_stacks=1, xy_offsets=None, dtype=torch.float, requires_grad=False, screen_dev=None, cal_dict=None, cal_entry='uD-in', device=torch.device('cpu'), sync_frame=True):
         super().__init__()
@@ -505,9 +476,7 @@ class Screen(nn.Module):
             x = x.detach().cpu()
 
         x_stacks = x.reshape(self._batch_stacks, self._nh*self._nw, self._h, self._w).swapaxes(0,1)
-        ####
-        ### TODO MAKE THE PADDING ACTUALLY TRANSLATING BY SHIFTING THE REFERENE POINT! Thx to Dr Martres :D
-        ###
+        # Pad each tile according to the calibration offsets before composing the screen canvas.
         for k, _ in enumerate(x_stacks):
             self._tmp_padded[k] = torch.nn.functional.pad(x_stacks[k], self._xy_offsets[k], "constant", 0)
 
@@ -537,16 +506,7 @@ class Screen(nn.Module):
             return tmp_img.to(self._dtype).to(self._device)
 
 class Mask(Screen):
-    """[Summary]
-
-    :param [ParamName]: [ParamDescription], defaults to [DefaultParamVal]
-    :type [ParamName]: [ParamType](, optional)
-    ...
-    :raises [ErrorType]: [ErrorDescription]
-    ...
-    :return: [ReturnDescription]
-    :rtype: [ReturnType]
-    """
+    """SLM phase-mask layer displayed on a calibrated screen device."""
     def __init__(self, img_shape=(1, 1, 28, 28), batch_stacks=1, xy_offsets=None, dtype=torch.float, requires_grad=False, screen_dev=None, cal_dict=None, cal_entry='slm-in', device=torch.device('cpu'), sync_frame=True):
         
         super().__init__(img_shape=img_shape,

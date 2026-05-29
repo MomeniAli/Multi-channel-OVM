@@ -184,7 +184,8 @@ def exp(exp=5000, widget=False, cal_key='uD-out#0', calibration_name=None):
         def forward(self, imgs_uD, imgs_SLM):
             "Tensors with input format [batch_stacks, Nmux, *shape_labeled]"
             self.SLM_layer._weight.data = imgs_SLM
-            self.uD_layer.forward(imgs_uD.reshape(self.Nmux*self.batch_stacks,1,*shape_labeled)) # different data format : why ? ask tim 
+            # Screen expects the multiplexed stack as (Nmux * batch_stacks, 1, H, W).
+            self.uD_layer.forward(imgs_uD.reshape(self.Nmux*self.batch_stacks,1,*shape_labeled))
             self.SLM_layer.forward(None)
             self._dev_mgmt.start_capture(n_frame=self.batch_stacks, sync_frame=True, remove_ref=True)
             out = self.CAM_layer.forward(None)

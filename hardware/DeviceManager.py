@@ -1,23 +1,31 @@
-import os
 import cv2
 import time
 import numpy as np
 import subprocess
-
-import matplotlib.pyplot as plt
 
 
 __queue_length__ = 32
 __ref_frame_tol__ = 2
 __xrandr_Ntry__ = 10
 __screen_rst_time__ = 300
+__default_camera_shape__ = (1200, 1920)
+
+
+def _camera_frame_shape(camera):
+    camera_obj = getattr(camera, "_camera", None)
+    height_node = getattr(camera_obj, "Height", None)
+    width_node = getattr(camera_obj, "Width", None)
+    try:
+        return int(height_node.Value), int(width_node.Value)
+    except Exception:
+        return __default_camera_shape__
 
 
 class DeviceManager(object):
     """
         Interface for the screens and cameras manager
     """
-    def __init__(self, screens=list(), cameras=list()):
+    def __init__(self, screens=None, cameras=None):
         """
         Initialize the DeviceManager providing the screens and cameras to be interfaced
         
@@ -28,8 +36,8 @@ class DeviceManager(object):
         :rtype: DeviceManager
         """
         # Register the screens that the camera is master
-        self._screens = screens
-        self._cameras = cameras
+        self._screens = list(screens or [])
+        self._cameras = list(cameras or [])
         
         # For frame synchronization
         self._reset_time = time.time()       
@@ -101,10 +109,6 @@ class DeviceManager(object):
                 kernel = cv2.getStructuringElement(cv2.MORPH_RECT,(51, 51))
                 thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, kernel)
 
-                #plt.figure()
-                #plt.imshow(thresh)
-                #plt.show()
-
                 # Find contours in the edged image 
                 contours, _ = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE) 
                  
@@ -138,14 +142,15 @@ class DeviceManager(object):
         :return: Copy of the acquired image
         :rtype: np.array([buffer.Height(),  buffer.Width()])
         """
-        # If the screen havenot been resetted for a while we need to do it
+        # Periodically reset the screens to keep the camera/display trigger in sync.
         if((time.time() - self._reset_time) >= __screen_rst_time__):
-            #print("Screen reset time reached, auto-resetting before capturing new image")
             self.reset_screen_trigger()
-            #print("done")
         
         n, n_try = 0, 0
-        img_out = np.zeros((len(self._cameras), n_frame, 1200, 1920))  # TODO remove magick number
+        frame_h, frame_w = (
+            _camera_frame_shape(self._cameras[0]) if self._cameras else __default_camera_shape__
+        )
+        img_out = np.zeros((len(self._cameras), n_frame, frame_h, frame_w))
 
         # Time control
         cam_trig_delta = np.zeros(n_frame)
@@ -245,7 +250,7 @@ class DeviceManager(object):
         mScreen = self._screens[0]
         mScreen.pause_render()
 
-        # Have you tried turning it off/on again? (The IT Crowd)
+        # Power-cycle the display outputs before restoring the configured layout.
         time.sleep(0.25)
         subprocess.run(["xrandr", "--output", "DP-1", "--off", "--nograb",
                                   "--output", "DP-2", "--off", "--nograb"])
