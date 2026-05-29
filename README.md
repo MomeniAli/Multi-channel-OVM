@@ -6,7 +6,7 @@ Code and configuration for online training experiments with multi-channel optica
 
 - `config_loader.py` loads YAML experiment configs, applies runtime overrides, resolves random seeds, and writes reproducible config snapshots.
 - `dataloader_patch.py` builds datasets and dataloaders for image, patchified, face-keypoint, notMNIST, VLM captioning, and synthetic experiments.
-- `exp_model_v1.py` and `exp_model_v2.py` provide physical optical experiment helpers for SLM mask generation, camera acquisition, and live display.
+- `exp_model_v2.py` provides physical optical experiment helpers for SLM mask generation, camera acquisition, and live display.
 - `fine_tunning.py` buffers optical-layer measurements and periodically fine-tunes the surrogate model during ONN training.
 - `models.py` defines the surrogate optical U-Net and related residual, attention, upsampling, and correction modules.
 - `optical_bridge.py` connects the physical optical forward pass with surrogate-based gradients through a custom autograd bridge.
@@ -48,4 +48,3 @@ Code and configuration for online training experiments with multi-channel optica
 ## Large Artifacts
 
 The `pre_trained_model_save/` directory contains checkpoints and experiment outputs. It is ignored by Git by default because it is large; use Git LFS, GitHub Releases, or an external storage location if these artifacts need to be shared.
-
