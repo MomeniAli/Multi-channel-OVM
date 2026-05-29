@@ -43,7 +43,3 @@ Code and configuration for online training experiments with multi-channel optica
 
 - `onn_online_training.ipynb`: main notebook for launching surrogate and ONN training runs.
 - `result.ipynb`: interactive result plotting notebook.
-
-## Large Artifacts
-
-The `pre_trained_model_save/` directory contains checkpoints and experiment outputs. It is ignored by Git by default because it is large; use Git LFS, GitHub Releases, or an external storage location if these artifacts need to be shared.
