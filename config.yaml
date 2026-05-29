@@ -70,18 +70,18 @@ onn:
   viz_every: 5
   phase_viz_every: 5
   metrics_viz_every: 5
-  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Optical_neural_net/checkpoints
+  save_dir: pre_trained_model_save/Optical_neural_net/checkpoints
 data:
   batch_size: 16
   augment: false
 surrogate:
-  ckpt_path: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
+  ckpt_path: pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
   enc_canvas_hw:
   - 112
   - 112
 pre_training_surrogate_model:
   enable: false
-  ckpt_path: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
+  ckpt_path: pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
   phase_mask_dim:
   - 112
   - 112
@@ -100,7 +100,7 @@ pre_training_surrogate_model:
   visualize_samples: true
   visualize_every: 5
   ckpt_every: 100
-  ckpt_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save
+  ckpt_dir: pre_trained_model_save
   save_best: true
   resume_from: best
   run_name: exp3_4

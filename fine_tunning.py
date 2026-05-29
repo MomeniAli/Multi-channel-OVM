@@ -15,7 +15,10 @@ import torch.nn as nn
 from IPython.display import display, HTML
 from torch.utils.data import DataLoader, TensorDataset
 
-from model_training.onn_online_training.models import Surrogate_OpticalNet_Unet
+try:
+    from .models import Surrogate_OpticalNet_Unet
+except ImportError:
+    from models import Surrogate_OpticalNet_Unet
 
 
 PHASE_CMAP = "magma"

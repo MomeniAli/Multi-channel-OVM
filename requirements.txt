@@ -1,0 +1,15 @@
+torch
+torchvision
+numpy
+PyYAML
+matplotlib
+tqdm
+ipython
+ipywidgets
+pandas
+pillow
+opencv-python
+transformers
+pytorch-msssim
+focal-frequency-loss
+

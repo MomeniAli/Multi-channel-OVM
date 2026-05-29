@@ -59,10 +59,11 @@ def _style_axes(ax) -> None:
     ax.spines["right"].set_visible(True)
     ax.tick_params(color="#7F7F7F", labelcolor="black", width=0.8, length=5)
 
+_THIS_DIR = Path(__file__).resolve().parent
+
 # Default checkpoint (change as needed)
-ckpt_path = (
-    "/home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/"
-    "Optical_neural_net/checkpoints/_binary_decision_5.pt"
+ckpt_path = str(
+    _THIS_DIR / "pre_trained_model_save" / "Optical_neural_net" / "checkpoints" / "_binary_decision_5.pt"
 )
 
 default_avg_batch = 50

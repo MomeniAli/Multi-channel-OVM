@@ -14,7 +14,10 @@ from torch.utils.data import DataLoader
 
 import matplotlib.pyplot as plt
 from IPython.display import display, DisplayHandle
-from .utils import encoding_x_phase_physical
+try:
+    from .utils import encoding_x_phase_physical
+except ImportError:
+    from utils import encoding_x_phase_physical
 
 
 # You can tweak these two to taste.

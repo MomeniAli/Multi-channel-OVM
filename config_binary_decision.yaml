@@ -94,12 +94,12 @@ onn:
   viz_every: 25
   phase_viz_every: 25
   metrics_viz_every: 25
-  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Optical_neural_net
+  save_dir: pre_trained_model_save/Optical_neural_net
 
 surrogate:
-  ckpt_path: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
+  ckpt_path: pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
   enc_canvas_hw: [112, 112]
-  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4
+  save_dir: pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4
 
 phase_processing:
   normalize_before: true

@@ -10,8 +10,12 @@ from typing import Callable, List, Optional, Tuple
 import torch
 from torch import nn
 
-from .phase_system import PhaseSystem
-from .utils import adaptive_gain_clip_safe, encoding_x_phase_physical, percentile_scale_spatial
+try:
+    from .phase_system import PhaseSystem
+    from .utils import adaptive_gain_clip_safe, encoding_x_phase_physical, percentile_scale_spatial
+except ImportError:
+    from phase_system import PhaseSystem
+    from utils import adaptive_gain_clip_safe, encoding_x_phase_physical, percentile_scale_spatial
 
 class _PhysForwardSurrogateBackward(torch.autograd.Function):
     """

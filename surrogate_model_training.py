@@ -18,30 +18,37 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 from IPython.display import display, HTML
-from pytorch_msssim import ssim, ms_ssim
-from focal_frequency_loss import FocalFrequencyLoss as FFL
+try:
+    from pytorch_msssim import ms_ssim
+except ImportError:  # pragma: no cover - optional until surrogate training runs
+    ms_ssim = None
 
-ffl= FFL(
-    loss_weight=1.0,  # internal scaling
-    alpha=1.0,        # scale for weights
-    patch_factor=1,   # 1 = full image FFL
-    ave_spectrum=False,
-    log_matrix=False,
-    batch_matrix=False,
+try:
+    from focal_frequency_loss import FocalFrequencyLoss as FFL
+except ImportError:  # pragma: no cover - optional until surrogate training runs
+    FFL = None
+
+ffl = (
+    FFL(
+        loss_weight=1.0,  # internal scaling
+        alpha=1.0,        # scale for weights
+        patch_factor=1,   # 1 = full image FFL
+        ave_spectrum=False,
+        log_matrix=False,
+        batch_matrix=False,
+    )
+    if FFL is not None
+    else None
 )
 
-from .utils import (
-    generate_phase_mask,
-    encoding_x_phase_physical,
-    percentile_scale_spatial,
-    channel_relative_mse,
-)
-from .training_viz import (
-    NotebookProgressBar,
-    USE_NOTEBOOK_PROGRESS,
-    ensure_dark_tqdm_theme,
-)
-from .config_loader import load_training_config
+try:
+    from .utils import generate_phase_mask, encoding_x_phase_physical, percentile_scale_spatial, channel_relative_mse
+    from .training_viz import NotebookProgressBar, USE_NOTEBOOK_PROGRESS, ensure_dark_tqdm_theme
+    from .config_loader import load_training_config
+except ImportError:
+    from utils import generate_phase_mask, encoding_x_phase_physical, percentile_scale_spatial, channel_relative_mse
+    from training_viz import NotebookProgressBar, USE_NOTEBOOK_PROGRESS, ensure_dark_tqdm_theme
+    from config_loader import load_training_config
 import tempfile
 
 
@@ -651,6 +658,11 @@ def train_optical(
                 if y_pred.dim() == 5 and y_pred.size(2) == 1:
                     y_pred = y_pred.squeeze(2)
                 mse_term = mse_loss(y_pred, exp_target)
+                if ffl is None or ms_ssim is None:
+                    raise ImportError(
+                        "Surrogate training requires `focal-frequency-loss` and `pytorch-msssim`. "
+                        "Install them with `pip install -r requirements.txt`."
+                    )
                 ffl_loss = ffl(y_pred, exp_target)
                 # Dynamically pick ms-ssim window/levels to satisfy size constraint: (win-1)*2^(levels-1) < min_hw
                 min_hw = int(min(y_pred.shape[-2], y_pred.shape[-1]))

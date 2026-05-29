@@ -12,8 +12,8 @@ for path in (root, library_root):
 
 import library
 thisfiledir = Path(__file__).resolve().parent
-expdir = '/home/adminlwe/Documents/lwe-opu/experiment'
-savedir = expdir + '/data/model_training'
+expdir = str(thisfiledir)
+savedir = str(thisfiledir / "data" / "model_training")
 calibdir = thisfiledir / "calibration"
 import time
 import numpy as np

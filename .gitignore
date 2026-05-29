@@ -1,4 +1,6 @@
 .DS_Store
+*.swp
+*.swo
 __pycache__/
 *.py[cod]
 .ipynb_checkpoints/
@@ -10,12 +12,16 @@ env/
 
 # Experiment outputs and large trained artifacts
 pre_trained_model_save/
+data/
+Data_Facial_keypoints/
+Data_VLM/
 *.pt
 *.pth
 *.ckpt
 
 # Logs and temporary files
 *.log
+.pytest_cache/
+.mypy_cache/
 tmp*/
 temp*/
-

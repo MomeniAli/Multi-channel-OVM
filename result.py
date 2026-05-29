@@ -1,6 +1,7 @@
 import torch
 import matplotlib.pyplot as plt
 import numpy as np
+from pathlib import Path
 from matplotlib.ticker import MaxNLocator, StrMethodFormatter
 try:
     from ipywidgets import interact, SelectionSlider
@@ -61,24 +62,24 @@ def _style_axes(ax):
     ax.spines["right"].set_visible(True)
     ax.tick_params(color="#7F7F7F", labelcolor="black", width=0.8, length=5)
 
-ckpt_path = "/home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Optical_neural_net/checkpoints/checkpoints/_mul_5_final.pt"  # change as needed
+_THIS_DIR = Path(__file__).resolve().parent
+ckpt_path = str(_THIS_DIR / "pre_trained_model_save/Optical_neural_net/checkpoints/checkpoints/_mul_5_final.pt")
 default_avg_batch = 50
 avg_batch_options = [1, 8, 16, 32, 64, 128, 256, 512, 1024]
 
-ckpt = torch.load(ckpt_path, map_location="cpu")  # checkpoints are simple dicts
-history = ckpt.get("history", {})
-
-iters = history.get("iters", [])
-
-train_loss = history.get("train_loss", [])
-test_loss = history.get("eval_loss", [])
-train_acc = history.get("train_acc", [])
-test_acc = history.get("eval_acc", [])
-test_iters = history.get("eval_iters", [])
-
-# Per-channel accuracy history (optional)
-train_acc_channels = history.get("train_acc_channels", [])
-test_acc_channels = history.get("eval_acc_channels", [])
+ckpt = {}
+history = {}
+iters = []
+train_loss = []
+test_loss = []
+train_acc = []
+test_acc = []
+test_iters = []
+train_acc_channels = []
+test_acc_channels = []
+test_loss_x = []
+test_acc_x = []
+_history_loaded = False
 
 def _test_x_from_history(series):
     if not series:
@@ -87,8 +88,36 @@ def _test_x_from_history(series):
         return test_iters[:len(series)]
     return list(range(len(series)))
 
-test_loss_x = _test_x_from_history(test_loss)
-test_acc_x = _test_x_from_history(test_acc)
+
+def _set_history(new_history):
+    global history, iters, train_loss, test_loss, train_acc, test_acc, test_iters
+    global train_acc_channels, test_acc_channels, test_loss_x, test_acc_x
+    history = new_history or {}
+    iters = history.get("iters", [])
+    train_loss = history.get("train_loss", [])
+    test_loss = history.get("eval_loss", [])
+    train_acc = history.get("train_acc", [])
+    test_acc = history.get("eval_acc", [])
+    test_iters = history.get("eval_iters", [])
+    train_acc_channels = history.get("train_acc_channels", [])
+    test_acc_channels = history.get("eval_acc_channels", [])
+    test_loss_x = _test_x_from_history(test_loss)
+    test_acc_x = _test_x_from_history(test_acc)
+
+
+def load_checkpoint(path=None):
+    global ckpt, _history_loaded
+    p = Path(path or ckpt_path)
+    if not p.is_absolute():
+        p = _THIS_DIR / p
+    if not p.exists():
+        raise FileNotFoundError(f"Checkpoint not found: {p}")
+    ckpt = torch.load(p, map_location="cpu")
+    if not isinstance(ckpt, dict):
+        raise ValueError(f"Expected checkpoint dict, got {type(ckpt)}")
+    _set_history(ckpt.get("history", {}))
+    _history_loaded = True
+    return ckpt
 
 def _batch_average(values, x_vals=None, window=1):
     if not values:
@@ -547,6 +576,9 @@ def _plot_accuracy_surfaces(
     plt.show()
 
 def plot_history(avg_batch=1, end_iter=None):
+    if not _history_loaded:
+        load_checkpoint()
+
     # Average train loss/acc over avg_batch
     train_loss_use, train_loss_x_raw = _truncate_series_by_iter(train_loss, iters[:len(train_loss)], end_iter)
     train_acc_use, train_acc_x_raw = _truncate_series_by_iter(train_acc, iters[:len(train_acc)], end_iter)

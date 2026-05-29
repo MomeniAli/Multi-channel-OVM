@@ -2,6 +2,32 @@
 
 Code and configuration for online training experiments with multi-channel optical neural networks.
 
+## Setup
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+`exp_model_v2.py` is hardware-facing and also expects the local optical setup packages (`library`, `op_torch`) plus the camera/SLM drivers used in the lab.
+
+## Usage
+
+```bash
+python optical_onn_training.py --config config.yaml
+python optical_onn_training_mix.py --config config_mix.yaml
+python optical_onn_training_binary_decision.py --config config_binary_decision.yaml
+python optical_onn_training_mix_face_linear.py --config config_mix_face.yaml
+python optical_onn_training_mix_VLM.py --config config_mix_VLM.yaml
+```
+
+Every training script accepts dotted runtime overrides, for example:
+
+```bash
+python optical_onn_training_mix.py --override onn.max_epochs=2 --override data.batch_size=1
+```
+
 ## Contents
 
 - `config_loader.py` loads YAML experiment configs, applies runtime overrides, resolves random seeds, and writes reproducible config snapshots.

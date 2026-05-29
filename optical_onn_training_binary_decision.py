@@ -28,43 +28,64 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tqdm.auto import tqdm
 
-from model_training.onn_online_training.models import Surrogate_OpticalNet_Unet
-from model_training.onn_online_training.dataloader_patch import build_patch_loaders
-from model_training.onn_online_training.utils import encoding_x_phase_physical
-from model_training.onn_online_training.surrogate_model_training import make_optical_sys, reset_live_plot
-from model_training.onn_online_training.config_loader import (
-    load_training_config,
-    resolve_onn_seed,
-    write_config_snapshot,
-)
-from model_training.onn_online_training.phase_system import (
-    PhaseSystem,
-    configure_phase_unit,
-    phase_to_unit,
-)
-from model_training.onn_online_training.optical_bridge import OpticalBridge
-from model_training.onn_online_training.training_viz import (
-    USE_NOTEBOOK_PROGRESS,
-    NotebookProgressBar,
-    ensure_dark_tqdm_theme,
-    create_training_viz_layout,
-    init_metrics_plot_state,
-    update_metrics_plot,
-    init_sample_viz_state,
-    update_sample_viz,
-    init_phase_viz_state,
-    update_phase_viz,
-    compute_tile_boxes,
-)
-from model_training.onn_online_training.fine_tunning import (
-    accumulate_fine_tune_samples,
-    init_fine_tune_state,
-    maybe_fine_tune_surrogate,
-    reset_fine_tune_viz,
-)
+try:
+    from .models import Surrogate_OpticalNet_Unet
+    from .dataloader_patch import build_patch_loaders
+    from .utils import encoding_x_phase_physical
+    from .surrogate_model_training import make_optical_sys, reset_live_plot
+    from .config_loader import load_training_config, resolve_onn_seed, write_config_snapshot
+    from .phase_system import PhaseSystem, configure_phase_unit, phase_to_unit
+    from .optical_bridge import OpticalBridge
+    from .training_viz import (
+        USE_NOTEBOOK_PROGRESS,
+        NotebookProgressBar,
+        ensure_dark_tqdm_theme,
+        create_training_viz_layout,
+        init_metrics_plot_state,
+        update_metrics_plot,
+        init_sample_viz_state,
+        update_sample_viz,
+        init_phase_viz_state,
+        update_phase_viz,
+        compute_tile_boxes,
+    )
+    from .fine_tunning import (
+        accumulate_fine_tune_samples,
+        init_fine_tune_state,
+        maybe_fine_tune_surrogate,
+        reset_fine_tune_viz,
+    )
+except ImportError:
+    from models import Surrogate_OpticalNet_Unet
+    from dataloader_patch import build_patch_loaders
+    from utils import encoding_x_phase_physical
+    from surrogate_model_training import make_optical_sys, reset_live_plot
+    from config_loader import load_training_config, resolve_onn_seed, write_config_snapshot
+    from phase_system import PhaseSystem, configure_phase_unit, phase_to_unit
+    from optical_bridge import OpticalBridge
+    from training_viz import (
+        USE_NOTEBOOK_PROGRESS,
+        NotebookProgressBar,
+        ensure_dark_tqdm_theme,
+        create_training_viz_layout,
+        init_metrics_plot_state,
+        update_metrics_plot,
+        init_sample_viz_state,
+        update_sample_viz,
+        init_phase_viz_state,
+        update_phase_viz,
+        compute_tile_boxes,
+    )
+    from fine_tunning import (
+        accumulate_fine_tune_samples,
+        init_fine_tune_state,
+        maybe_fine_tune_surrogate,
+        reset_fine_tune_viz,
+    )
 
 
-DEFAULT_BINARY_CONFIG_PATH = Path(__file__).resolve().parent / "config_binary_decision.yaml"
+PROJECT_ROOT = Path(__file__).resolve().parent
+DEFAULT_BINARY_CONFIG_PATH = PROJECT_ROOT / "config_binary_decision.yaml"
 ECOC_CODEBOOK_TYPE = "fixed_10x16_v1"
 FIXED_ECOC_CODEBOOK_v0 = torch.tensor(
     [
@@ -169,9 +190,7 @@ def _prepare_data_loaders(data_cfg: Dict[str, object]):
 
 def _load_surrogate(sur_cfg: Dict[str, object], device: torch.device, channel_num: int):
     enc_canvas_hw = tuple(sur_cfg.get("enc_canvas_hw", [112, 112]))
-    surrogate_dir_default = Path(
-        "/home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp2"
-    )
+    surrogate_dir_default = PROJECT_ROOT / "pre_trained_model_save" / "Surrogate_OpticalNet_Unet" / "exp2"
     surrogate_dir = Path(sur_cfg.get("save_dir", str(surrogate_dir_default)))
     surrogate_dir.mkdir(parents=True, exist_ok=True)
     default_surrogate_ckpt = surrogate_dir / "ckpt_best.pt"
@@ -1434,9 +1453,7 @@ def train(
     metrics_avg_every = max(1, viz_every if viz_every > 0 else 1)
     metrics_update_every = max(1, int(onn_cfg.get("metrics_viz_every", metrics_avg_every)))
 
-    optical_default_dir = Path(
-        "/home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Optical_neural_net"
-    )
+    optical_default_dir = PROJECT_ROOT / "pre_trained_model_save" / "Optical_neural_net"
     run_dir = Path(onn_cfg.get("save_dir", str(optical_default_dir)))
     run_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_dir = run_dir / "checkpoints"

@@ -47,9 +47,8 @@ try:
 except Exception:  # pragma: no cover - optional dependency for VLM
     AutoTokenizer = None
 
-_FACIAL_DEFAULT_ZIP = Path(
-    "/home/adminlwe/Documents/lwe-opu/experiment/model_training/onn_online_training/Data_Facial_keypoints/training.zip"
-)
+_PROJECT_ROOT = Path(__file__).resolve().parent
+_FACIAL_DEFAULT_ZIP = _PROJECT_ROOT / "Data_Facial_keypoints" / "training.zip"
 _FACIAL_SHAPES_LOGGED = False
 _IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp"}
 _CAPTION_FILTER_ARTICLES = {"a", "an", "the"}
