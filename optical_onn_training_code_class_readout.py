@@ -1,12 +1,12 @@
 """
-Binary-decision ONN training script.
+Code-class readout ONN training script.
 
 Each logical image is expanded into the optical batch dimension:
 - channels 0..9 receive the same input image and act as class-specific detectors
 - channels 10..15 are dummy channels kept only for phase/surrogate compatibility
 
-There is no digital mixing between optical layers. The final active channels make
-YES/NO decisions from two large output-plane regions. Class logits are
+There is no digital mixing between optical layers. The final active channels produce
+YES/NO readout scores from two large output-plane regions. Class logits are
 yes_score - no_score for class channels 0..9.
 
 Optionally, the single logical input image can be encoded as a 2x2 tile of
@@ -85,7 +85,7 @@ except ImportError:
 
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-DEFAULT_BINARY_CONFIG_PATH = PROJECT_ROOT / "config_binary_decision.yaml"
+DEFAULT_CODE_CLASS_READOUT_CONFIG_PATH = PROJECT_ROOT / "config_code_class_readout.yaml"
 ECOC_CODEBOOK_TYPE = "fixed_10x16_v1"
 FIXED_ECOC_CODEBOOK_v0 = torch.tensor(
     [
@@ -404,10 +404,10 @@ def _save_checkpoint(
         "iter": iter_idx,
         "epoch": epoch_idx,
     }
-    binary_cfg = cfg.get("binary_decision", {}) if isinstance(cfg, dict) else {}
+    binary_cfg = cfg.get("code_class_readout", {}) if isinstance(cfg, dict) else {}
     if isinstance(binary_cfg, dict):
         mode = str(binary_cfg.get("mode", "one_vs_rest")).strip().lower()
-        ckpt_obj["binary_decision_mode"] = mode
+        ckpt_obj["code_class_readout_mode"] = mode
         if mode == "ecoc":
             ckpt_obj["ecoc_codebook_type"] = ECOC_CODEBOOK_TYPE
     if extra_state:
@@ -444,64 +444,64 @@ class _MetricBuffer:
         return last_iter, avg_val
 
 
-def _resolve_binary_cfg(cfg: Dict[str, object], channel_num: int) -> Dict[str, object]:
-    binary_cfg = dict(cfg.get("binary_decision", {}))
+def _resolve_code_class_readout_cfg(cfg: Dict[str, object], channel_num: int) -> Dict[str, object]:
+    binary_cfg = dict(cfg.get("code_class_readout", {}))
     if not bool(binary_cfg.get("enable", True)):
-        raise ValueError("optical_onn_training_binary_decision.py requires binary_decision.enable=true")
+        raise ValueError("optical_onn_training_code_class_readout.py requires code_class_readout.enable=true")
     if channel_num != 16:
-        raise ValueError(f"binary_decision requires channel_num=16, got {channel_num}")
+        raise ValueError(f"code_class_readout requires channel_num=16, got {channel_num}")
     num_classes = int(binary_cfg.get("num_classes", cfg.get("tiles", {}).get("num_classes", 10)))
     if num_classes != 10:
-        raise ValueError(f"binary_decision requires num_classes=10, got {num_classes}")
+        raise ValueError(f"code_class_readout requires num_classes=10, got {num_classes}")
     mode = str(binary_cfg.get("mode", "one_vs_rest")).strip().lower()
     if mode not in {"one_vs_rest", "ecoc"}:
-        raise ValueError("binary_decision.mode must be one of {'one_vs_rest', 'ecoc'}")
+        raise ValueError("code_class_readout.mode must be one of {'one_vs_rest', 'ecoc'}")
     if mode == "one_vs_rest":
         active_class_channels = int(binary_cfg.get("active_class_channels", 10))
         dummy_channels = int(binary_cfg.get("dummy_channels", channel_num - active_class_channels))
         if active_class_channels != 10:
-            raise ValueError("binary_decision.active_class_channels must be 10 for one_vs_rest classes 0..9")
+            raise ValueError("code_class_readout.active_class_channels must be 10 for one_vs_rest classes 0..9")
         if dummy_channels != 6:
-            raise ValueError("binary_decision.dummy_channels must be 6 for one_vs_rest with channel_num=16")
+            raise ValueError("code_class_readout.dummy_channels must be 6 for one_vs_rest with channel_num=16")
     else:
         active_class_channels = channel_num
         dummy_channels = 0
     dummy_mode = str(binary_cfg.get("dummy_mode", "zeros")).strip().lower()
     if dummy_mode not in {"zeros", "fixed_random"}:
-        raise ValueError("binary_decision.dummy_mode must be 'zeros' or 'fixed_random'")
+        raise ValueError("code_class_readout.dummy_mode must be 'zeros' or 'fixed_random'")
     input_encoding = str(binary_cfg.get("input_encoding", "single")).strip().lower()
     if input_encoding in {"rot4", "rot4_tiling"}:
         input_encoding = "rot4_tile"
     if input_encoding not in {"single", "rot4_tile"}:
-        raise ValueError("binary_decision.input_encoding must be 'single' or 'rot4_tile'")
+        raise ValueError("code_class_readout.input_encoding must be 'single' or 'rot4_tile'")
     yes_region = str(binary_cfg.get("yes_region", "top")).strip().lower()
     no_region = str(binary_cfg.get("no_region", "bottom")).strip().lower()
     if yes_region not in {"top", "bottom"} or no_region not in {"top", "bottom"}:
-        raise ValueError("binary_decision yes_region/no_region currently support only 'top' and 'bottom'")
+        raise ValueError("code_class_readout yes_region/no_region currently support only 'top' and 'bottom'")
     if yes_region == no_region:
-        raise ValueError("binary_decision yes_region and no_region must be different")
+        raise ValueError("code_class_readout yes_region and no_region must be different")
     yes_no_tile_hw = _parse_optional_hw(
         binary_cfg.get("yes_no_tile_hw", None),
-        key="binary_decision.yes_no_tile_hw",
+        key="code_class_readout.yes_no_tile_hw",
     )
     yes_no_tile_margin = _parse_nonnegative_hw(
         binary_cfg.get("yes_no_tile_margin", (0, 0)),
-        key="binary_decision.yes_no_tile_margin",
+        key="code_class_readout.yes_no_tile_margin",
     )
     yes_no_tile_gap = int(binary_cfg.get("yes_no_tile_gap", 0))
     if yes_no_tile_gap < 0:
-        raise ValueError("binary_decision.yes_no_tile_gap must be non-negative")
+        raise ValueError("code_class_readout.yes_no_tile_gap must be non-negative")
     ecoc_raw_cfg = dict(binary_cfg.get("ecoc", {}))
     onn_cfg = cfg.get("onn", {}) if isinstance(cfg.get("onn", {}), dict) else {}
     margin_loss_weight = float(binary_cfg.get("margin_loss_weight", onn_cfg.get("margin_loss_weight", 0.0)))
     margin_loss_gap = float(binary_cfg.get("margin_loss_gap", onn_cfg.get("margin_loss_gap", 0.0)))
     lambda_spill = float(binary_cfg.get("lambda_spill", 0.0))
     if margin_loss_weight < 0:
-        raise ValueError("binary_decision.margin_loss_weight must be non-negative")
+        raise ValueError("code_class_readout.margin_loss_weight must be non-negative")
     if margin_loss_gap < 0:
-        raise ValueError("binary_decision.margin_loss_gap must be non-negative")
+        raise ValueError("code_class_readout.margin_loss_gap must be non-negative")
     if lambda_spill < 0:
-        raise ValueError("binary_decision.lambda_spill must be non-negative")
+        raise ValueError("code_class_readout.lambda_spill must be non-negative")
     ecoc_cfg = {
         "num_bits": int(ecoc_raw_cfg.get("num_bits", 16)),
         "codebook_type": str(ecoc_raw_cfg.get("codebook_type", ECOC_CODEBOOK_TYPE)),
@@ -510,9 +510,9 @@ def _resolve_binary_cfg(cfg: Dict[str, object], channel_num: int) -> Dict[str, o
         "lambda_bit": float(ecoc_raw_cfg.get("lambda_bit", 0.0)),
     }
     if ecoc_cfg["num_bits"] != 16:
-        raise ValueError("binary_decision.ecoc.num_bits must be 16")
+        raise ValueError("code_class_readout.ecoc.num_bits must be 16")
     if ecoc_cfg["codebook_type"] != ECOC_CODEBOOK_TYPE:
-        raise ValueError(f"binary_decision.ecoc.codebook_type must be {ECOC_CODEBOOK_TYPE!r}")
+        raise ValueError(f"code_class_readout.ecoc.codebook_type must be {ECOC_CODEBOOK_TYPE!r}")
 
     binary_cfg.update(
         {
@@ -617,7 +617,7 @@ def _rot4_tile_input_image(x_img: torch.Tensor, target_hw: Tuple[int, int]) -> t
     return torch.cat([top, bottom], dim=-2).clamp(0.0, 1.0)
 
 
-def _prepare_binary_decision_input(
+def _prepare_code_class_readout_input(
     x_batch: torch.Tensor,
     *,
     channel_num: int,
@@ -630,7 +630,7 @@ def _prepare_binary_decision_input(
     if x_batch.dim() != 4:
         raise ValueError(f"Expected x_batch (1,C,H,W), got {tuple(x_batch.shape)}")
     if x_batch.size(0) != 1:
-        raise ValueError(f"Binary decision mode requires data.batch_size=1, got {tuple(x_batch.shape)}")
+        raise ValueError(f"Code-class readout mode requires data.batch_size=1, got {tuple(x_batch.shape)}")
 
     active_class_channels = int(binary_cfg["active_class_channels"])
     mode = str(binary_cfg.get("mode", "one_vs_rest"))
@@ -641,7 +641,7 @@ def _prepare_binary_decision_input(
         assert active_class_channels == channel_num == 16
         assert int(binary_cfg["dummy_channels"]) == 0
     else:
-        raise ValueError(f"Unsupported binary_decision.mode {mode!r}")
+        raise ValueError(f"Unsupported code_class_readout.mode {mode!r}")
     assert channel_num >= active_class_channels
     data_method = str(data_method).strip().lower()
 
@@ -730,12 +730,12 @@ def build_binary_yes_no_masks(
     margin_y, margin_x = int(tile_margin[0]), int(tile_margin[1])
     gap = int(tile_gap)
     if margin_y < 0 or margin_x < 0 or gap < 0:
-        raise ValueError("binary_decision tile margins/gap must be non-negative")
+        raise ValueError("code_class_readout tile margins/gap must be non-negative")
     avail_h = H - 2 * margin_y - gap
     avail_w = W - 2 * margin_x
     if avail_h <= 0 or avail_w <= 0:
         raise ValueError(
-            f"binary_decision tile margins/gap leave no usable area: out_hw={out_hw}, "
+            f"code_class_readout tile margins/gap leave no usable area: out_hw={out_hw}, "
             f"margin={tile_margin}, gap={gap}"
         )
     if tile_hw is None:
@@ -744,7 +744,7 @@ def build_binary_yes_no_masks(
     else:
         tile_h, tile_w = int(tile_hw[0]), int(tile_hw[1])
     if tile_h <= 0 or tile_w <= 0:
-        raise ValueError(f"binary_decision.yes_no_tile_hw must be positive, got {tile_hw!r}")
+        raise ValueError(f"code_class_readout.yes_no_tile_hw must be positive, got {tile_hw!r}")
     content_h = 2 * tile_h + gap
     if content_h > H - 2 * margin_y:
         raise ValueError(
@@ -935,7 +935,7 @@ def _compute_binary_readout_details(
         )
         class_logits = _decode_ecoc_logits(margins_2d, codebook, binary_cfg)
     else:
-        raise ValueError(f"Unsupported binary_decision.mode {mode!r}")
+        raise ValueError(f"Unsupported code_class_readout.mode {mode!r}")
     if binary_scores.shape != (active_class_channels, 2):
         raise ValueError(f"binary_scores must be ({active_class_channels},2), got {tuple(binary_scores.shape)}")
     return y_active, masks, binary_scores_raw, binary_scores, class_logits, margins_2d
@@ -1273,7 +1273,7 @@ def _evaluate(
         for x_val, y_val in val_loader:
             x_val = x_val.to(device)
             labels_val = y_val.to(device)
-            x_phys = _prepare_binary_decision_input(
+            x_phys = _prepare_code_class_readout_input(
                 x_val,
                 channel_num=channel_num,
                 binary_cfg=binary_cfg,
@@ -1324,7 +1324,7 @@ def train(
     config_path: Optional[str] = None,
     overrides: Optional[Dict[str, object]] = None,
 ) -> None:
-    config_path = str(DEFAULT_BINARY_CONFIG_PATH if config_path is None else config_path)
+    config_path = str(DEFAULT_CODE_CLASS_READOUT_CONFIG_PATH if config_path is None else config_path)
     cfg, cfg_path = load_training_config(config_path, overrides)
     print(f"Using config: {cfg_path}")
     seed = resolve_onn_seed(cfg, default=1337)
@@ -1333,7 +1333,7 @@ def train(
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     channel_num = int(cfg.get("channel_num", 16))
-    binary_cfg = _resolve_binary_cfg(cfg, channel_num)
+    binary_cfg = _resolve_code_class_readout_cfg(cfg, channel_num)
     binary_mode = str(binary_cfg["mode"])
     active_class_channels = int(binary_cfg["active_class_channels"])
     ecoc_codebook = (
@@ -1343,12 +1343,12 @@ def train(
     )
     if binary_mode == "one_vs_rest":
         print(
-            f"Binary decision mode=one_vs_rest: active class channels 0..{active_class_channels - 1}; "
+            f"Code-class readout mode=one_vs_rest: active class channels 0..{active_class_channels - 1}; "
             f"dummy channels {active_class_channels}..{channel_num - 1} excluded from readout/loss/accuracy."
         )
     else:
         print(
-            "Binary decision mode=ecoc: active code-bit channels 0..15; no dummy channels; "
+            "Code-class readout mode=ecoc: active code-bit channels 0..15; no dummy channels; "
             f"codebook={ECOC_CODEBOOK_TYPE} shape={tuple(ecoc_codebook.shape)}."
         )
 
@@ -1361,7 +1361,7 @@ def train(
     use_rot4_tiling = bool(data_cfg.get("use_rot4_tiling", False))
     batch_size = int(data_cfg.get("batch_size", 1))
     if batch_size != 1:
-        raise ValueError("data.batch_size must be 1 for binary decision mode.")
+        raise ValueError("data.batch_size must be 1 for code-class readout mode.")
     if int(data_cfg.get("num_channels", channel_num)) != channel_num:
         data_cfg["num_channels"] = channel_num
     train_loader, val_loader = _prepare_data_loaders(data_cfg)
@@ -1458,7 +1458,7 @@ def train(
     run_dir.mkdir(parents=True, exist_ok=True)
     checkpoint_dir = run_dir / "checkpoints"
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
-    checkpoint_layer_path = checkpoint_dir / f"_binary_decision_{n_layers}.pt"
+    checkpoint_layer_path = checkpoint_dir / f"_code_class_readout_{n_layers}.pt"
 
     write_config_snapshot(cfg, run_dir)
 
@@ -1552,7 +1552,7 @@ def train(
     if bridge.gain_raw is not None:
         extra_ckpt_tensors["bridge_gain_raw"] = bridge.gain_raw
     checkpoint_extra_state: Dict[str, object] = {k: v for k, v in extra_ckpt_tensors.items() if v is not None}
-    checkpoint_extra_state["binary_decision_mode"] = binary_mode
+    checkpoint_extra_state["code_class_readout_mode"] = binary_mode
     if ecoc_codebook is not None:
         checkpoint_extra_state["ecoc_codebook_type"] = ECOC_CODEBOOK_TYPE
         checkpoint_extra_state["ecoc_codebook"] = ecoc_codebook
@@ -1712,7 +1712,7 @@ def train(
                 surrogate.eval()
                 x_batch = x_batch.to(device)
                 labels = labels.to(device)
-                x_phys = _prepare_binary_decision_input(
+                x_phys = _prepare_code_class_readout_input(
                     x_batch,
                     channel_num=channel_num,
                     binary_cfg=binary_cfg,
@@ -2010,12 +2010,12 @@ def train(
 
 
 def parse_cli() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Train a binary-decision optical neural network (ONN).")
+    parser = argparse.ArgumentParser(description="Train a code-class readout optical neural network (ONN).")
     parser.add_argument(
         "--config",
         type=str,
-        default=str(DEFAULT_BINARY_CONFIG_PATH),
-        help="Path to YAML config file (default: config_binary_decision.yaml)",
+        default=str(DEFAULT_CODE_CLASS_READOUT_CONFIG_PATH),
+        help="Path to YAML config file (default: config_code_class_readout.yaml)",
     )
     parser.add_argument(
         "--override",

@@ -63,7 +63,7 @@ _THIS_DIR = Path(__file__).resolve().parent
 
 # Default checkpoint (change as needed)
 ckpt_path = str(
-    _THIS_DIR / "pre_trained_model_save" / "Optical_neural_net" / "checkpoints" / "_binary_decision_5.pt"
+    _THIS_DIR / "pre_trained_model_save" / "Optical_neural_net" / "checkpoints" / "_code_class_readout_5.pt"
 )
 
 default_avg_batch = 50
@@ -188,7 +188,7 @@ def plot_history(
     end_iter: Optional[float] = None,
 ) -> None:
     """
-    Plot train/test loss and accuracy from a binary-decision ONN checkpoint.
+    Plot train/test loss and accuracy from a code-class readout ONN checkpoint.
 
     This intentionally plots only:
       - train_loss (averaged over avg_batch)
@@ -333,7 +333,7 @@ def _plot_optional_series(
     return plotted
 
 
-def plot_binary_diagnostics(
+def plot_code_class_readout_diagnostics(
     avg_batch: int = 1,
     *,
     checkpoint_path: Optional[str] = None,
@@ -342,9 +342,9 @@ def plot_binary_diagnostics(
     end_iter: Optional[float] = None,
 ) -> None:
     """
-    Plot binary-decision-specific train metrics when they exist in the checkpoint.
+    Plot code-class readout-specific train metrics when they exist in the checkpoint.
 
-    These series are produced by optical_onn_training_binary_decision.py:
+    These series are produced by optical_onn_training_code_class_readout.py:
       - train_loss_cls / train_loss_bin
       - train_true_yes_score / train_true_no_score
       - train_true_margin / train_max_negative_margin / train_margin_gap
@@ -369,11 +369,11 @@ def plot_binary_diagnostics(
     )
     ax_loss.set_xlabel("Iteration")
     ax_loss.set_ylabel("Loss")
-    ax_loss.set_title("Binary Loss Terms")
+    ax_loss.set_title("Auxiliary Loss Terms")
     if plotted_loss:
         ax_loss.legend(frameon=False)
     else:
-        ax_loss.text(0.02, 0.98, "No binary loss metrics found", transform=ax_loss.transAxes, va="top")
+        ax_loss.text(0.02, 0.98, "No auxiliary loss metrics found", transform=ax_loss.transAxes, va="top")
     _style_axes(ax_loss)
 
     plotted_scores = _plot_optional_series(
@@ -444,7 +444,7 @@ def _widget_plot() -> None:
     )
 
 
-def _widget_binary_diagnostics() -> None:
+def _widget_code_class_readout_diagnostics() -> None:
     if interact is None or SelectionSlider is None:
         raise RuntimeError("ipywidgets is not available in this environment.")
 
@@ -455,7 +455,7 @@ def _widget_binary_diagnostics() -> None:
         continuous_update=False,
     )
     interact(
-        lambda avg_batch: plot_binary_diagnostics(
+        lambda avg_batch: plot_code_class_readout_diagnostics(
             avg_batch=avg_batch,
             ignore_train_outliers=default_ignore_train_outliers,
             outlier_mad_z=default_outlier_mad_z,
@@ -471,7 +471,7 @@ __all__ = [
     "default_ignore_train_outliers",
     "default_outlier_mad_z",
     "plot_history",
-    "plot_binary_diagnostics",
+    "plot_code_class_readout_diagnostics",
     "_widget_plot",
-    "_widget_binary_diagnostics",
+    "_widget_code_class_readout_diagnostics",
 ]

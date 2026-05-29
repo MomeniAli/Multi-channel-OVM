@@ -17,7 +17,7 @@ pip install -r requirements.txt
 ```bash
 python optical_onn_training.py --config config.yaml
 python optical_onn_training_mix.py --config config_mix.yaml
-python optical_onn_training_binary_decision.py --config config_binary_decision.yaml
+python optical_onn_training_code_class_readout.py --config config_code_class_readout.yaml
 python optical_onn_training_mix_face_linear.py --config config_mix_face.yaml
 python optical_onn_training_mix_VLM.py --config config_mix_VLM.yaml
 ```
@@ -46,14 +46,14 @@ python optical_onn_training_mix.py --override onn.max_epochs=2 --override data.b
 
 - `optical_onn_training.py`: baseline multi-layer optical classification without channel mixing.
 - `optical_onn_training_mix.py`: mixed-channel optical classification with learnable/digital channel mixing.
-- `optical_onn_training_binary_decision.py`: binary-decision/ECOC optical classification.
+- `optical_onn_training_code_class_readout.py`: code-class readout/ECOC optical classification.
 - `optical_onn_training_mix_face_linear.py`: mixed-channel facial keypoint regression.
 - `optical_onn_training_mix_VLM.py`: optical encoder plus transformer-style decoder for captioning.
 
 ## Result Scripts
 
 - `result.py`: baseline ONN plots and diagnostics.
-- `result_binary_decision.py`: binary-decision/ECOC metrics and diagnostics.
+- `result_code_class_readout.py`: code-class readout/ECOC metrics and diagnostics.
 - `result_mix.py`: mixed-channel classification curves.
 - `result_mix_face.py`: facial keypoint regression metrics.
 - `result_mix_VLM.py`: captioning metrics and generated-caption history.
@@ -61,7 +61,7 @@ python optical_onn_training_mix.py --override onn.max_epochs=2 --override data.b
 ## Configurations
 
 - `config.yaml`: default supervised forward-forward style ONN configuration.
-- `config_binary_decision.yaml`: binary-decision/ECOC configuration.
+- `config_code_class_readout.yaml`: code-class readout/ECOC configuration.
 - `config_mix.yaml`: mixed-channel classification configuration.
 - `config_mix_face.yaml`: facial keypoint regression configuration.
 - `config_mix_VLM.yaml`: VLM/captioning configuration.

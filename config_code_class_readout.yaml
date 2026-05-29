@@ -11,7 +11,7 @@ data:
   data_root: ./data
   val_split: 0.02
 
-binary_decision:
+code_class_readout:
   enable: true
   mode: ecoc  # options: one_vs_rest, ecoc
   active_class_channels: 10
