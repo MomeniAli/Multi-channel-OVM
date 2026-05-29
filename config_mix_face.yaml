@@ -1,0 +1,86 @@
+channel_num: 16
+
+data:
+  dataset: Facial
+  batch_size: 1
+  hw: [96, 96]
+  method: patchify
+  overlap_percent: 30
+  num_channels: 16
+  use_rot4_tiling: false
+  augment: false
+  data_root: /home/adminlwe/Documents/lwe-opu/experiment/model_training/onn_online_training/Data_Facial_keypoints
+
+input_conv:
+  kernel_size: 10
+  padding: 1
+  bias: true
+
+mixer:
+  kernel_size: 10
+  bias: true
+  norm: relu
+  clamp_min: 0.0
+  clamp_max: 1.0
+
+readout:
+  mask_h: 78
+  mask_w: 78
+  pool_h: 6
+  pool_w: 6
+  num_channels: 16
+  linear_in_features: 169
+  linear_out_features: 30
+  outside_mask_penalty_weight: 8.0e-1
+  learnable_channel_average: true
+
+onn:
+  seed: random
+  n_layers: 5
+  in_silico_mode: false
+  phase_mask_shape: [16, 112, 112]
+  phase_init: random
+  phase_init_sigma: 0.001
+  structural_nonlinearity: true
+  alpha_init: 0.25
+  alpha_max: 1.0
+  alpha_map_hw: [112, 112]
+  use_amp: true
+  opt: adamw
+  lr: 2.0e-4
+  lr_min: 1.0e-5
+  warmup_iters: 0
+  lr_scheduler: cosine
+  weight_decay: 0.0
+  accum_steps: 16
+  grad_clip_norm: null
+  max_epochs: 10
+  eval_every: 500
+  ckpt_every: 20
+  viz_every: 5
+  phase_viz_every: 5
+  metrics_viz_every: 5
+  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Optical_neural_net
+
+surrogate:
+  ckpt_path: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
+  enc_canvas_hw: [112, 112]
+  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4
+
+phase_processing:
+  normalize_before: true
+  norm_eps: 1.0e-6
+  squash: tanh
+  temperature: 1.5
+  smooth_kernel: 0
+
+fine_tune_surrogate:
+  enable: true
+  steps: 50
+  lr: 2.0e-4
+  weight_decay: 0.0
+  buffer_max: 2048
+  freq_iters: 500
+  viz_every: 0
+  sample_every: 0
+  show_sample: true

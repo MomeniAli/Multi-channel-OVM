@@ -1,0 +1,142 @@
+channel_num: 16
+group_size: 1
+onn:
+  training_mode: supervised_ff
+  n_layers: 5
+  in_silico_mode: false
+  phase_mask_shape:
+  - 16
+  - 112
+  - 112
+  phase_init: zeros
+  phase_init_sigma: 0.5
+  structural_nonlinearity: true
+  alpha_map_hw:
+  - 112
+  - 112
+  alpha_init: 0.25
+  alpha_max: 1.0
+  channel_sigma_init: 1.0
+  use_amp: true
+  opt: adamw
+  lr: 0.0007
+  lr_min: 0.00001
+  warmup_iters: 5
+  lr_scheduler: cosine
+  weight_decay: 0.0
+  accum_steps: 8
+  scff:
+    enable: true
+    alpha: 4.0
+    loss_type: energy_roi
+    local_weight: 1.0
+    detach_between_layers: true
+    reduce_channels: sum
+    sigma_weight_local: False
+    ema_momentum: 0.005
+    ema_update: False
+    pool_k: 8
+    use_rotations: False
+    block_sizes:
+    - 2
+    - 2
+    - 1
+  supervised_ff:
+    enable: true
+    num_classes: 10
+    acc_freq: 25
+    acc_avg_batches: 10
+    label_block_size: 6
+    label_code_grid_hw:
+    - 7
+    - 7
+    label_bank_type: hadamard
+    label_bank_seed: 0
+    plus_value: 1.0
+    minus_value: 0.0
+    rotate_tiles: true
+    wrong_label_sampling: uniform_not_equal
+    layout: TLBR_digit_TRBL_label
+  grad_clip_norm: null
+  margin_loss_weight: 0.15
+  margin_loss_gap: 0.05
+  margin_loss_ratio: 1.5
+  max_epochs: 10
+  eval_every: 8505
+  ckpt_every: 20 
+  # Set to `null` (or -1 / "random") to pick a new RNG seed each run.
+  # The resolved integer seed is written into the run's config snapshot for reproducibility.
+  seed: 35667
+  viz_every: 5
+  phase_viz_every: 5
+  metrics_viz_every: 5
+  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Optical_neural_net/checkpoints
+data:
+  batch_size: 16
+  augment: false
+surrogate:
+  ckpt_path: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
+  enc_canvas_hw:
+  - 112
+  - 112
+pre_training_surrogate_model:
+  enable: false
+  ckpt_path: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
+  phase_mask_dim:
+  - 112
+  - 112
+  phase_mask_sigma: 2.0
+  HW_input_limit:
+  - 112
+  - 112
+  multi_shot_avg: 1
+  epochs: 100
+  max_iters: 7000000000
+  eval_every: 500
+  lr: 0.0005
+  weight_decay: 0.0
+  accum_steps: 5
+  plot_live: true
+  visualize_samples: true
+  visualize_every: 5
+  ckpt_every: 100
+  ckpt_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save
+  save_best: true
+  resume_from: best
+  run_name: exp3_4
+  quiet_mode: false
+fine_tune_surrogate:
+  enable: true
+  steps: 50
+  lr: 0.0001
+  weight_decay: 0.0
+  buffer_max: 2048
+  freq_iters: 250
+  viz_every: 0
+  sample_every: 0
+  show_sample: true
+tiles:
+  out_hw:
+  - 112
+  - 112
+  tile_hw:
+  - 18
+  - 18
+  rows: 3
+  cols: 4
+  gap:
+  - 2
+  - 2
+  num_classes: 10
+readout:
+  use_log_scaling: true
+  temperature: 1.5
+  temperature_learnable: true
+  temperature_per_channel: true
+  log_eps: 1.0e-4
+phase_processing:
+  squash: tanh
+  temperature: 1.5
+  normalize_before: true
+  norm_eps: 1.0e-6
+  smooth_kernel: 0

@@ -1,0 +1,183 @@
+channel_num: 16
+
+data:
+  dataset: vlm
+  dataset_name: mnist_fashion_notmnist
+  dataset_root: /home/adminlwe/Documents/lwe-opu/experiment/model_training/onn_online_training/Data_VLM
+  images_dir: auto
+  captions_file: caption.txt
+  train_ratio: 0.995
+  val_ratio: 0.005
+  split_seed: 1337
+  image_size: [112, 112]
+  image_color_mode: rgb
+  hw: [112, 112]
+  batch_size: 1
+  num_workers: 2
+  shuffle_train: true
+  shuffle_val: false
+  shuffle_test: false
+  method: patchify
+  num_channels: 16
+  use_rot4_tiling: false
+  overlap_percent: 20.0
+  synthetic_side_gap: 4
+  synthetic_train_samples: 10000
+  synthetic_val_samples: 1000
+  augment: false
+  pin_memory: true
+  drop_last_train: false
+  max_caption_length: 32
+
+tokenizer:
+  tokenizer_name: simple
+  tokenizer_type: vocab
+  tokenizer_mode: simple
+  tokenizer_local_files_only: true
+  vocab_size: auto
+  start_token: <start>
+  end_token: <end>
+  pad_token: <pad>
+  unk_token: <unk>
+  lowercase: true
+  punctuation_mode: keep
+  Max_word: 6
+  simple_tokenizer_min_freq: 3
+  simple_tokenizer_lowercase: true
+  max_caption_length: 32
+
+input_conv:
+  in_channels: 3
+  kernel_size: 10
+  padding: 1
+  bias: true
+
+input_preprocess:
+  normalize_before_patchify: true
+  mean: [0.5, 0.5, 0.5]
+  std: [0.5, 0.5, 0.5]
+  std_eps: 1.0e-6
+
+input_positional_encoding:
+  enabled: true
+  mode: sin2d
+  num_bands: 4
+  scale: 0.07
+  injection: add
+  zero_mean: true
+  clamp_01: false
+
+mixer:
+  kernel_size: 5
+  bias: true
+  norm: relu
+  clamp_min: 0.0
+  clamp_max: 1.0
+  reverse_skip:
+    enabled: true
+    alpha: 1.0
+    x_mode: interp
+    x_norm_mod: percentile
+    fusion_norm: percentile
+
+encoder_readout:
+  enabled: true
+  type: conv_patch_tokens
+  in_channels: 16
+  input_skip:
+    enabled: true
+    mode: concat
+  out_channels: 64
+  kernel_size: 7
+  stride: 7
+  padding: 0
+  output_h: 16
+  output_w: 16
+  emb_size: 256
+  use_token_positional_embedding: true
+  dropout: 0.05
+
+Decoder:
+  emb_size: 256
+  num_layers: 2
+  num_heads: 8
+  ff_dim: 1024
+  dropout: 0.1
+  attn_dropout: 0.1
+  max_seq_len: 32
+  tie_weights: false
+  use_learned_positional_embedding: true
+  layer_norm_eps: 1.0e-5
+  activation: gelu
+  vocab_size: tokenizer
+
+captioning:
+  caption_loss_type: cross_entropy
+  label_smoothing: 0.1
+  teacher_forcing: true
+  generation_method: beam
+  beam_size: 3
+  eval_beam_size: 5
+  max_gen_len: 32
+  bos_idx: auto
+  eos_idx: auto
+  pad_idx: auto
+  eos_handling: true
+  bos_handling: true
+  ignore_index: pad_idx
+  validation_generation:
+    enabled: true
+    every: 500
+    beam_size: 5
+    num_samples: 2
+
+onn:
+  seed: random
+  n_layers: 6
+  in_silico_mode: false
+  phase_mask_shape: [16, 112, 112]
+  phase_init: random
+  phase_init_sigma: 0.001
+  structural_nonlinearity: false
+  alpha_init: 0.25
+  alpha_max: 1.0
+  alpha_map_hw: [112, 112]
+  use_amp: true
+  opt: adamw
+  lr: 10.0e-5
+  lr_min: 1.0e-5
+  warmup_iters: 0
+  lr_scheduler: cosine
+  weight_decay: 0.0
+  accum_steps: 20
+  grad_clip_norm: null
+  max_epochs: 10
+  eval_every: 500
+  ckpt_every: 20
+  viz_every: 25
+  phase_viz_every: 25
+  metrics_viz_every: 25
+  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Optical_neural_net
+
+surrogate:
+  ckpt_path: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
+  enc_canvas_hw: [112, 112]
+  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4
+
+phase_processing:
+  normalize_before: true
+  norm_eps: 1.0e-6
+  squash: tanh
+  temperature: 1.5
+  smooth_kernel: 0
+
+fine_tune_surrogate:
+  enable: true
+  steps: 50
+  lr: 2.0e-4
+  weight_decay: 0.0
+  buffer_max: 2048
+  freq_iters: 500
+  viz_every: 0
+  sample_every: 0
+  show_sample: true

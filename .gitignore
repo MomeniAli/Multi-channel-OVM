@@ -1,0 +1,21 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# Local environments
+.venv/
+venv/
+env/
+
+# Experiment outputs and large trained artifacts
+pre_trained_model_save/
+*.pt
+*.pth
+*.ckpt
+
+# Logs and temporary files
+*.log
+tmp*/
+temp*/
+

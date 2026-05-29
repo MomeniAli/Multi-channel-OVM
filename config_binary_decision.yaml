@@ -1,0 +1,128 @@
+channel_num: 16
+
+data:
+  dataset: mnist
+  batch_size: 1
+  hw: [112, 112]
+  method: upsampler
+  num_channels: 16
+  use_rot4_tiling: false
+  augment: false
+  data_root: ./data
+  val_split: 0.02
+
+binary_decision:
+  enable: true
+  mode: ecoc  # options: one_vs_rest, ecoc
+  active_class_channels: 10
+  dummy_channels: 6
+  dummy_mode: zeros
+  dummy_seed: 1234
+  # single: resize one input image to the optical canvas.
+  # rot4_tile: make a 2x2 canvas with 0/90/180/270 degree rotations.
+  input_encoding: rot4_tile
+  yes_region: top
+  no_region: bottom
+  # YES/NO tiles are centered as a vertical stack. For 112x112 output,
+  # this gives 8 px left/right margin, at least 8 px top/bottom margin,
+  # and 8 px gap between the top and bottom tiles.
+  # Set yes_no_tile_hw: null to auto-fill the available area from margins/gap.
+  yes_no_tile_hw: [38, 58]
+  yes_no_tile_margin: [13, 27]
+  yes_no_tile_gap: 5
+  normalize_yes_no: true
+  use_log_ratio_margin: true
+  eps: 1.0e-6
+  use_aux_binary_loss: false
+  lambda_bin: 0.0
+  binary_pos_weight: 9.0
+  # Penalize active-channel output power that lands outside the YES/NO readout boxes.
+  lambda_spill: 0.05
+  ecoc:
+    num_bits: 16
+    codebook_type: fixed_10x16_v1
+    normalize_decoder: true
+    use_aux_bit_loss: true
+    lambda_bit: 0.05
+  debug_first_iters: 5
+
+input_conv:
+  kernel_size: 7
+  padding: 1
+  bias: true
+
+mixer:
+  kernel_size: 3
+  bias: true
+  norm: relu
+  clamp_min: 0.0
+  clamp_max: 1.0
+
+readout:
+  use_log_scaling: true
+  temperature: 1.5
+  log_eps: 1.0e-6
+  temperature_learnable: true
+  temperature_per_channel: true
+
+onn:
+  seed: random
+  n_layers: 5
+  in_silico_mode: false
+  phase_mask_shape: [16, 112, 112]
+  phase_init: random
+  phase_init_sigma: 0.001
+  structural_nonlinearity: false
+  alpha_init: 0.25
+  alpha_max: 1.0
+  alpha_map_hw: [112, 112]
+  use_amp: true
+  opt: adamw
+  lr: 2.0e-4
+  lr_min: 1.0e-6
+  warmup_iters: 0
+  lr_scheduler: cosine
+  weight_decay: 0.0
+  accum_steps: 20
+  grad_clip_norm: null
+  margin_loss_weight: 0.05
+  margin_loss_gap: 0.4
+  margin_loss_ratio: 1.5
+  max_epochs: 4
+  eval_every: 1000
+  ckpt_every: 20
+  viz_every: 25
+  phase_viz_every: 25
+  metrics_viz_every: 25
+  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Optical_neural_net
+
+surrogate:
+  ckpt_path: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
+  enc_canvas_hw: [112, 112]
+  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4
+
+phase_processing:
+  normalize_before: true
+  norm_eps: 1.0e-6
+  squash: tanh
+  temperature: 1.5
+  smooth_kernel: 0
+
+fine_tune_surrogate:
+  enable: true
+  steps: 50
+  lr: 1.0e-4
+  weight_decay: 0.0
+  buffer_max: 2048
+  freq_iters: 2000
+  viz_every: 0
+  sample_every: 0
+  show_sample: true
+
+tiles:
+  out_hw: [112, 112]
+  tile_hw: [20, 20]
+  rows: 3
+  cols: 4
+  gap: [2, 2]
+  num_classes: 10

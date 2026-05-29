@@ -1,0 +1,94 @@
+channel_num: 16
+
+data:
+  dataset: fashion_mnist
+  batch_size: 1
+  hw: [112, 112]
+  method: upsampler
+  num_channels: 16
+  use_rot4_tiling: false
+  augment: false
+  data_root: ./data
+
+input_conv:
+  kernel_size: 7
+  padding: 1
+  bias: true
+
+mixer:
+  kernel_size: 3
+  bias: true
+  norm: relu
+  clamp_min: 0.0
+  clamp_max: 1.0
+
+readout:
+  use_log_scaling: true
+  temperature: 1.5
+  log_eps: 1.0e-6
+  temperature_learnable: true
+  temperature_per_channel: true
+  fuse_mode: weighted
+  weighted_init: uniform
+
+onn:
+  seed: random
+  n_layers: 5
+  in_silico_mode: false
+  phase_mask_shape: [16, 112, 112]
+  phase_init: random
+  phase_init_sigma: 0.001
+  structural_nonlinearity: true
+  alpha_init: 0.25
+  alpha_max: 1.0
+  alpha_map_hw: [112, 112]
+  use_amp: true
+  opt: adamw
+  lr: 1.06e-4
+  lr_min: 1.0e-6
+  warmup_iters: 0
+  lr_scheduler: cosine
+  weight_decay: 0.0
+  accum_steps: 32
+  grad_clip_norm: null
+  margin_loss_weight: 0.05
+  margin_loss_gap: 0.05
+  margin_loss_ratio: 1.5
+  max_epochs: 4
+  eval_every: 1000
+  ckpt_every: 20
+  viz_every: 35
+  phase_viz_every: 35
+  metrics_viz_every: 35
+  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Optical_neural_net
+
+surrogate:
+  ckpt_path: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4/ckpt_best.pt
+  enc_canvas_hw: [112, 112]
+  save_dir: /home/adminlwe/Documents/lwe-opu/experiment/model_training/pre_trained_model_save/Surrogate_OpticalNet_Unet/exp3_4
+
+phase_processing:
+  normalize_before: true
+  norm_eps: 1.0e-6
+  squash: tanh
+  temperature: 1.5
+  smooth_kernel: 0
+
+fine_tune_surrogate:
+  enable: true
+  steps: 50
+  lr: 1.0e-4
+  weight_decay: 0.0
+  buffer_max: 2048
+  freq_iters: 500
+  viz_every: 0
+  sample_every: 0
+  show_sample: true
+
+tiles:
+  out_hw: [112, 112]
+  tile_hw: [20, 20]
+  rows: 3
+  cols: 4
+  gap: [2, 2]
+  num_classes: 10
