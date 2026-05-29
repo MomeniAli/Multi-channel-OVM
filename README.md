@@ -41,7 +41,6 @@ Code and configuration for online training experiments with multi-channel optica
 
 ## Notebooks
 
-- `Calibration.ipynb`: hardware initialization and calibration workflow.
 - `onn_online_training.ipynb`: main notebook for launching surrogate and ONN training runs.
 - `result.ipynb`: interactive result plotting notebook.
 
