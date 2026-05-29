@@ -1,29 +1,15 @@
 """Physical optical experiment helpers for camera/SLM acquisition."""
 
-import sys
 from pathlib import Path
 import pickle
 
 thisfiledir = Path(__file__).resolve().parent
-for root in (thisfiledir, *thisfiledir.parents):
-    library_root = root / "library"
-    if library_root.exists():
-        for path in (root, library_root):
-            path_str = str(path)
-            if path_str not in sys.path:
-                sys.path.insert(0, path_str)
-        break
 
 import ipywidgets
 import numpy as np
 import cv2
 import torch
 from scipy.ndimage import gaussian_filter
-
-from library.software.layers import Screen, Camera, Mask
-from library.hardware.DisplayGL import DisplayGL
-from library.hardware.PylonCamera import PylonCamera
-from library.hardware.DeviceManager import DeviceManager
 
 expdir = str(thisfiledir)
 savedir = str(thisfiledir / "data" / "model_training")
@@ -67,6 +53,21 @@ def load_calibration_data(calibration_name=None):
 def _require_calibration_loaded():
     if calibfile is None:
         load_calibration_data()
+
+
+def _load_hardware_classes():
+    if __package__:
+        from .hardware.layers import Screen, Camera, Mask
+        from .hardware.DisplayGL import DisplayGL
+        from .hardware.PylonCamera import PylonCamera
+        from .hardware.DeviceManager import DeviceManager
+    else:
+        from hardware.layers import Screen, Camera, Mask
+        from hardware.DisplayGL import DisplayGL
+        from hardware.PylonCamera import PylonCamera
+        from hardware.DeviceManager import DeviceManager
+    return Screen, Camera, Mask, DisplayGL, PylonCamera, DeviceManager
+
 
 def generate_flat_slm_mask(shape_labeled, value=0):
     _require_calibration_loaded()
@@ -136,6 +137,7 @@ def update_widget(img_widget, value):
     img_widget.value = bgr8_to_jpeg(value)
 
 def exp(exp=5000, widget=False, cal_key='uD-out#0', calibration_name=None):
+    Screen, Camera, Mask, DisplayGL, PylonCamera, DeviceManager = _load_hardware_classes()
     load_calibration_data(calibration_name)
     img_widget = ipywidgets.Image(format='jpeg', value=bgr8_to_jpeg(np.zeros((1,1))), width=400, height=300)
 

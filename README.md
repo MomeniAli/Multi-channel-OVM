@@ -10,7 +10,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-`exp_model.py` is hardware-facing and also expects the local optical setup packages (`library`, `op_torch`) plus the camera/SLM drivers used in the lab.
+`exp_model.py` is hardware-facing and uses the local `hardware/` package. The physical setup still requires the camera/SLM drivers and CUDA display runtime used in the lab.
 
 ## Usage
 
@@ -34,6 +34,7 @@ python optical_onn_training_mix.py --override onn.max_epochs=2 --override data.b
 - `dataloader_patch.py` builds datasets and dataloaders for image, patchified, face-keypoint, notMNIST, VLM captioning, and synthetic experiments.
 - `exp_model.py` provides physical optical experiment helpers for SLM mask generation, camera acquisition, and live display.
 - `fine_tuning.py` buffers optical-layer measurements and periodically fine-tunes the surrogate model during ONN training.
+- `hardware/` contains the local camera, display, device-manager, and optical-layer interfaces used by `exp_model.py`.
 - `models.py` defines the surrogate optical U-Net and related residual, attention, upsampling, and correction modules.
 - `optical_bridge.py` connects the physical optical forward pass with surrogate-based gradients through a custom autograd bridge.
 - `phase_system.py` manages trainable optical phase masks, including initialization, normalization, smoothing, and conversion to valid phase units.
